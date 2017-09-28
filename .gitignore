@@ -1,4 +1,7 @@
 build
 libs
 .vscode
-
+bin/
+.gradle
+.project
+.classpath

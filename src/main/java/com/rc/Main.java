@@ -8,27 +8,35 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
-			net.hebbian(patterns);
-			test(net, a_pattern ) ;
-			test(net, u_pattern ) ;
-			test(net, t_pattern ) ;
-			test(net, s_pattern ) ;
+//			net.hebbian(patterns);
+			net.storkey(patterns);
+			for( double pattern[] : patterns ) {
+				test(net, pattern ) ;
+			}
 		} catch( Throwable t ) {
 			t.printStackTrace( );
 			System.exit(1); 
 		}
 	}
 
-
-	static void test( HopfieldNetwork net, double inPattern[] ) {
-			
-		double pattern[] = new double[35] ;
-		for( int i=0 ; i<pattern.length ; i++ ) {
-			pattern[i] = (rng.nextInt(6) == 0 ? -1 : 1 ) * inPattern[i] ;
+	static double [] prepare( double in[] ) {
+		double rc[] = new double[ in.length ] ;
+		for( int i=0 ; i<rc.length ; i++ ) {
+			rc[i] = in[i] == 0 ? -1 : 1 ;
 		}
+		return rc ;
+	}
+
+	static void test( HopfieldNetwork net, double pattern[] ) {
 
 		StringBuilder sb[] = new StringBuilder[7] ;
-			
+		
+		for( int i=0 ; i<pattern.length ; i++ ) {
+			if( rng.nextInt(5) == 0 ) {
+				pattern[i] = -pattern[i] ;
+			}
+		}
+
 		int ix = 0 ;
 		for( int i=0 ; i<7 ; i++ ) {
 			sb[i] = new StringBuilder() ;
@@ -39,7 +47,7 @@ public class Main {
 		}
 
 		long start = System.currentTimeMillis() ;
-		net.run( pattern, 30 ) ;
+		net.run( pattern, 20 ) ;
 		long delta = System.currentTimeMillis() - start ;
 		//System.out.println( "Run in " + delta + "mS" );
 			
@@ -55,43 +63,46 @@ public class Main {
 		System.out.println( "----------------" ) ;
 	}
 
-	static double a_pattern[] = {
-			-1, -1, 1, -1, -1,
-			-1, 1, -1, 1, -1,
-			1, -1, -1, -1, 1,
-			1, 1, 1, 1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1 } ;
+	static double pattern0[] = {
+			 0,  0,  1,  0,  0,
+			 0,  1,  0,  1,  0,
+			 1,  0,  0,  0,  1,
+			 1,  1,  1,  1,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1 } ;
 
-	static double u_pattern[] = {
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			1, -1, -1, -1, 1,
-			-1, 1, 1, 1, -1 } ;
+	static double pattern1[] = {
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 0,  1,  1,  1,  0 } ;
 
-	static double t_pattern[] = {
-			1, 1, 1, 1, 1,
-			-1, -1, 1, -1, -1,
-			-1, -1, 1, -1, -1,
-			-1, -1, 1, -1, -1,
-			-1, -1, 1, -1, -1,
-			-1, -1, 1, -1, -1,
-			-1, -1, 1, -1, -1 } ;
+	static double pattern2[] = {
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1,
+			 0,  1,  0,  1,  0,
+			 0,  0,  1,  0,  0,
+			 0,  1,  0,  1,  0,
+			 1,  0,  0,  0,  1,
+			 1,  0,  0,  0,  1 } ;
 
-	static double s_pattern[] = {
-			-1, 1, 1, 1, -1,
-			1, -1, -1, -1, 1,
-			-1, 1, -1, -1, -1,
-			-1, -1, 1, -1, -1,
-			-1, -1, -1, 1, -1,
-			1, -1, -1, -1, 1,
-			-1, 1, 1, 1, -1 } ;
+	static double pattern3[] = {
+			 0,  1,  1,  1,  0,
+			 1,  0,  0,  0,  1,
+			 0,  1,  0,  0,  0,
+			 0,  0,  1,  0,  0,
+			 0,  0,  0,  1,  0,
+			 1,  0,  0,  0,  1,
+			 0,  1,  1,  1,  0 } ;
 
 
-	static double patterns[][] = { a_pattern, u_pattern, t_pattern, s_pattern } ;
+	static double patterns[][] = {  prepare(pattern0), 
+									prepare(pattern1), 
+									prepare(pattern2), 
+									prepare(pattern3) } ;
 
 }
