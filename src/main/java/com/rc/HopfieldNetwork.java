@@ -9,15 +9,31 @@ public class HopfieldNetwork {
 	final Random rng ;
 
 	public HopfieldNetwork( final int vectorSize ) {
-		this.rng = new Random( 128 ) ;
+		this.rng = new Random( 128  ) ;
 		this.vectorSize = vectorSize ;
 		this.weights = new double[vectorSize][vectorSize] ;
+	}
 
-		// init -1 to +1
-		for( int i=0 ; i<this.weights.length ; i++ ) {
-			for( int j=0 ; j<this.weights[i].length ; j++ ) {
-				this.weights[i][j] = 0 ; //( i==j ) ? 0 : (2.0 * rng.nextDouble() - 0.1) ;
-			}
+	public void run( double input[], int iterations ) {
+		for( int i=0 ; i<iterations ; i++ ) {
+			step( input ) ;
+		}
+	}
+
+	public void step( double input[] ) {
+
+		// shuffle ... part 1
+		int indices[] = new int[vectorSize] ;
+		for( int i=0 ; i<indices.length ; i++ ) {
+			indices[i] = i ;
+		}
+
+		for( int i=0 ; i<vectorSize ; i++ ) {
+			// shuffle ... part 2
+			int ix = rng.nextInt( vectorSize-i ) ;
+			indices[ix] = indices[ vectorSize-i-1 ] ;
+
+			input[ix] = getOutput(ix, input ) ;			
 		}
 	}
 
@@ -29,28 +45,7 @@ public class HopfieldNetwork {
 		return s>0 ? 1 : -1  ;
 	}
 
-
-	public void step( double input[] ) {
-
-		// shuffle ... part 1
-		int indices[] = new int[vectorSize] ;
-		for( int i=0 ; i<indices.length ; i++ ) indices[i] = i ;
-
-		for( int i=0 ; i<vectorSize ; i++ ) {
-			// shuffle ... part 2
-			int ix = rng.nextInt( vectorSize-i ) ;
-			indices[ix] = indices[ vectorSize-i-1 ] ;
-
-			input[ix] = getOutput(ix, input ) ;			
-		}
-	}
-
-	public void run( double input[], int iterations ) {
-		for( int i=0 ; i<iterations ; i++ ) {
-			step( input ) ;
-		}
-	}
-
+//=====================================================================
 
 	public double[] calculateWeights( int neuronIndex, double patterns[][] ) {
 
@@ -89,26 +84,29 @@ public class HopfieldNetwork {
 
 	//=================================================================================
 
-	private double calculateLocalField(int i, double[] pattern) {
-		double sum = 0;
-		for(int k=0;k<vectorSize;k++) {
-			if(k!=i) {
-				sum += weights[i][k] * pattern[k];
+
+	public void storkey( double pattern[] ) { 
+
+		double h[] = new double[vectorSize] ;
+		double dw[][] = new double[vectorSize][vectorSize] ;
+		
+		// h = pattern x weights 
+		for(int i=0;i<vectorSize;i++) {
+			for(int k=0;k<vectorSize;k++) {
+				if(k!=i) {
+					h[i] += weights[i][k] * pattern[k];
+				}
 			}
 		}
-		return sum;
-	}
 
-
-	public void storkey( double pattern[] ) {
-
-		double dw[][] = new double[vectorSize][vectorSize] ;
-
+		// t1 = pattern x pattern
+		// t2 = pattern x h
+		// t3 = n/a
 		for(int i=0;i<vectorSize;i++) {
 			for(int j=0;j<vectorSize;j++) {
 				double t1 = pattern[i] * pattern[j] ;
-				double t2 = pattern[i] * calculateLocalField(j,pattern) ;
-				double t3 = pattern[j] * calculateLocalField(i,pattern) ;
+				double t2 = pattern[i] * h[j] ;
+				double t3 = pattern[j] * h[i] ;
 				dw[i][j] += (t1-t2-t3) / vectorSize ;
 			}
 		}		
@@ -122,9 +120,15 @@ public class HopfieldNetwork {
 	
 
 	public void storkey( double patterns[][] ) {
+		for( int i=0 ; i<vectorSize ; i++ ) {
+			for( int j=0 ; j<vectorSize ; j++ ) {
+				weights[i][j] = 0 ;
+			}
+		}
 		for( int p=0 ; p<patterns.length ; p++ ) {
 			storkey( patterns[p] ) ;
 		}
 	}
 
+	
 }

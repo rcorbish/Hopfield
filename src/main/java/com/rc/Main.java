@@ -32,16 +32,21 @@ public class Main {
 		StringBuilder sb[] = new StringBuilder[7] ;
 		
 		for( int i=0 ; i<pattern.length ; i++ ) {
-			if( rng.nextInt(5) == 0 ) {
-				pattern[i] = -pattern[i] ;
+			if( rng.nextInt(3) == 0 ) {
+				pattern[i] = rng.nextGaussian() ; //-pattern[i] ;
 			}
 		}
 
 		int ix = 0 ;
 		for( int i=0 ; i<7 ; i++ ) {
 			sb[i] = new StringBuilder() ;
-			for( int j=0 ; j<5 ; j++ ) {
-				sb[i].append( pattern[ix++] > 0 ? '*' : ' ' );
+			for( int j=0 ; j<5 ; j++ ) { 
+				double c = pattern[ix++] ;
+				if( c < -0.95 ) sb[i].append( ' ' );
+				else if( c< -0.50 ) sb[i].append( '-' );
+				else if( c< -0.0 ) sb[i].append( '.' );
+				else if( c< 0.5 ) sb[i].append( ',' );
+				else sb[i].append( '*' );
 			}
 			sb[i].append( "       " ) ;
 		}
