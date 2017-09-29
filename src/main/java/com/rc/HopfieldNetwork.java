@@ -1,26 +1,68 @@
 package com.rc;
 
 import java.util.Random;
-
+/**
+ * Implements a Hopfiled Network, which supports Storkey 
+ * and Hebbian learning
+ * 
+ * The network capacity depends on learning:
+ * 
+ * Hebb 	num patterns = 0.138 * vectorSize
+ * Storkey	num patterns = vectorSize / sqrt( 2 x log(vectorSize) )
+ */
 public class HopfieldNetwork {
 
-	final int vectorSize ;
-	final double weights[][] ;
-	final Random rng ;
+	/**
+	 * The length of the vector pattern to 'remember'
+	 */
+	private final int vectorSize ;
+	/**
+	 * Weights of all interconnects 
+	 * Usually substripted by i,j  the weight from i to j 
+	 * neuron
+	 */
+	private final double weights[][] ;
 
+	// Used in shuffling
+	private final Random rng ;
+
+	/**
+	 * Create a new network 
+	 * 
+	 * @param vectorSize the number of neurons to put into the network
+	 */
 	public HopfieldNetwork( final int vectorSize ) {
 		this.rng = new Random( 128  ) ;
 		this.vectorSize = vectorSize ;
 		this.weights = new double[vectorSize][vectorSize] ;
 	}
 
-	public void run( double input[], int iterations ) {
+	/**
+	 * Parse a pattern and update it with one of the learned patterns.
+	 * This does not have an early finish, iterations of about 10 
+	 * work well in many cases.
+	 * 
+	 * @param pattern the input pattern - value elements should be -1 to +1
+	 * @param iterations the number of iterations to execute before finishing
+	 */
+	public void run( double pattern[], int iterations ) {
 		for( int i=0 ; i<iterations ; i++ ) {
-			step( input ) ;
+			step( pattern ) ;
 		}
 	}
 
-	public void step( double input[] ) {
+	/**
+	 * Execute one step of sending an input pattern element by
+	 * element, in a random order, into the network.
+	 * The input pattern is updated with the learned pattern.
+	 * This process should be repeated several times to get
+	 * a 'good' output
+	 * 
+	 * @see #run(double[], int)
+	 * @param pattern the input pattern - value elements should be -1 to +1
+	 * 
+	 */
+	protected void step( double pattern[] ) {
 
 		// shuffle ... part 1
 		int indices[] = new int[vectorSize] ;
@@ -33,11 +75,20 @@ public class HopfieldNetwork {
 			int ix = rng.nextInt( vectorSize-i ) ;
 			indices[ix] = indices[ vectorSize-i-1 ] ;
 
-			input[ix] = getOutput(ix, input ) ;			
+			pattern[ix] = getOutput(ix, pattern ) ;			
 		}
 	}
 
-	public double getOutput( int neuronIndex, double pattern[] ) {
+	/**
+	 * Passes a pattern element into the network,
+	 * returning the value of the neuron after summing
+	 * all inputs, scaled by their weights.
+	 * 
+	 * @param neuronIndex which neuron to process
+	 * @param pattern the input pattern - value elements should be -1 to +1
+	 * @return the output, normalized to -1 or +1 
+	 */
+	protected double getOutput( int neuronIndex, double pattern[] ) {
 		double s = 0 ;
 		for( int i=0 ; i<vectorSize ; i++ ) {
 			s += weights[neuronIndex][i] * pattern[i] ;  
@@ -47,36 +98,24 @@ public class HopfieldNetwork {
 
 //=====================================================================
 
-	public double[] calculateWeights( int neuronIndex, double patterns[][] ) {
-
-		double weights[] = new double[ vectorSize ] ;
-
-		for( int i=0 ; i<weights.length ; i++ ) {
-			if( neuronIndex != i ) {
-				double tot = 0.0 ;
-				for( int p=0 ; p<patterns.length ; p++ ) {
-					tot += patterns[p][i] * patterns[p][neuronIndex] ;
-				}
-				weights[i] = tot / patterns.length ;
-			}
-		}
-
-		return weights ;
-	}
-
-
-
+	/**
+	 * Train the network with a set of patterns, using
+	 * Hebb's batch learning method.
+	 * 
+	 * @param patterns an array of vector patterns
+	 */
 	public void hebbian( double patterns[][] ) {
 
-		double tmp[][] = new double[vectorSize][] ;
-
+		// calculate weights in a single batch
 		for( int i=0 ; i<vectorSize ; i++ ) {
-			tmp[i] = calculateWeights(i, patterns) ;
-		}
-
-		for( int i=0 ; i<this.weights.length ; i++ ) {
-			for( int j=0 ; j<this.weights[i].length ; j++ ) {
-				this.weights[i][j] = tmp[i][j] ;
+			for( int j=0 ; j<vectorSize ; j++ ) {
+				if( j != i ) {
+					double tot = 0.0 ;
+					for( int p=0 ; p<patterns.length ; p++ ) {
+						tot += patterns[p][j] * patterns[p][i] ;
+					}
+					weights[i][j] = tot / patterns.length ;
+				}
 			}
 		}
 	}
@@ -85,7 +124,7 @@ public class HopfieldNetwork {
 	//=================================================================================
 
 
-	public void storkey( double pattern[] ) { 
+	protected void storkey( double pattern[] ) { 
 
 		double h[] = new double[vectorSize] ;
 		double dw[][] = new double[vectorSize][vectorSize] ;
@@ -118,7 +157,12 @@ public class HopfieldNetwork {
 		}
 	}
 	
-
+/**
+ * Train the network with a set of patterns, using
+ * Storkey's iterative learning method.
+ * 
+ * @param patterns an array of vector patterns
+ */
 	public void storkey( double patterns[][] ) {
 		for( int i=0 ; i<vectorSize ; i++ ) {
 			for( int j=0 ; j<vectorSize ; j++ ) {
@@ -130,5 +174,5 @@ public class HopfieldNetwork {
 		}
 	}
 
-	
+
 }
