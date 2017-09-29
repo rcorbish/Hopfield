@@ -4,11 +4,16 @@ Hopfield network in java
 
 ## Building
 
-```gradle build```
-```gradle copyDependencies```
+```
+	gradle copyDependencies
+```
+
+Above compiles & copies necessary libraries to local ```libs``` directory
 
 ## Running
 
-./run.sh
+```
+	./run.sh
+```
 
 

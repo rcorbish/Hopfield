@@ -22,7 +22,7 @@ dependencies {
     compile group: 'net.sf.jopt-simple', name: 'jopt-simple', version: '4.9'
 }
 
-task copyDependencies(type: Copy) {
+task copyDependencies(type: Copy, dependsOn: build) {
     from configurations.runtime
     into new File(".", "libs")
 }
