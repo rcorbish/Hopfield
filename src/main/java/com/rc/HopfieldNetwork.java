@@ -123,7 +123,7 @@ public class HopfieldNetwork {
 		DoubleMatrix dw = t1.sub( t2 ).sub( t2.transpose() ).add( t4 ).div( vectorSize ) ;
 		
 		// clear the diagonal ( so we can't learn identity matrix )
-		for( int i=0 ; i<vectorSize ; i++ ) dw.put( i, i, 0 ) ;
+		dw.subi( DoubleMatrix.diag( dw.diag() ) ) ;
 		
 		weights.addi( dw ) ; 
 	}
