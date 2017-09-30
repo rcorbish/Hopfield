@@ -118,10 +118,9 @@ public class HopfieldNetwork {
 		
 		DoubleMatrix t1 = pattern.mmul( pattern.transpose() ) ;
 		DoubleMatrix t2 = pattern.mmul( h.transpose() ) ;
-		DoubleMatrix t3 = h.mmul( pattern.transpose() ) ;
 		DoubleMatrix t4 = h.mmul( h.transpose() ) ;	
 	
-		DoubleMatrix dw = t1.sub( t2 ).sub( t3 ).add( t4 ).div( vectorSize ) ;
+		DoubleMatrix dw = t1.sub( t2 ).sub( t2.transpose() ).add( t4 ).div( vectorSize ) ;
 		
 		// clear the diagonal ( so we can't learn identity matrix )
 		for( int i=0 ; i<vectorSize ; i++ ) dw.put( i, i, 0 ) ;
