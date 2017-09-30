@@ -1,26 +1,14 @@
 package com.rc;
 
 import java.util.Random;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
 
 public class Main {
 
 	static Random rng = new Random() ;
 	public static void main(String[] args) {
-		OptionParser parser = new OptionParser( "hs" ) ;
-		OptionSet options = parser.parse( args ) ;
-							
 		try {
 			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
-			if( options.has( "h" ) ) {
-				net.hebbian(patterns) ;
-			} else if( options.has( "s" ) ) {
-				net.storkey(patterns);
-			} else {
-				System.err.println( "Use -h | -s  for learning (hebbian | storkey)" ) ;
-				System.exit( 2 ) ;
-			}
+			net.learn(patterns);
 			test( net, patterns ) ;
 		} catch( Throwable t ) {
 			t.printStackTrace( );

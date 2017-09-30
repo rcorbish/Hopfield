@@ -1,6 +1,8 @@
 package com.rc;
 
 import java.util.Random;
+
+import org.jblas.DoubleMatrix;
 /**
  * Implements a Hopfiled Network, which supports Storkey (2nd order) 
  * and Hebbian learning
@@ -24,7 +26,7 @@ public class HopfieldNetwork {
 	 * Usually substripted by i,j  the weight from i to j 
 	 * neuron
 	 */
-	private final double weights[][] ;
+	private final DoubleMatrix weights ;
 
 	// Used in shuffling
 	private final Random rng ;
@@ -37,7 +39,7 @@ public class HopfieldNetwork {
 	public HopfieldNetwork( final int vectorSize ) {
 		this.rng = new Random( 128  ) ;
 		this.vectorSize = vectorSize ;
-		this.weights = new double[vectorSize][vectorSize] ;
+		this.weights = new DoubleMatrix(vectorSize,vectorSize) ;
 	}
 
 	/**
@@ -50,7 +52,7 @@ public class HopfieldNetwork {
 	 */
 	public void run( double pattern[], int iterations ) {
 		for( int i=0 ; i<iterations ; i++ ) {
-			step( pattern ) ;
+			step( new DoubleMatrix( pattern ) ) ;
 		}
 	}
 
@@ -61,11 +63,13 @@ public class HopfieldNetwork {
 	 * This process should be repeated several times to get
 	 * a 'good' output
 	 * 
+	 * NB This is not vectorized (yet) due to the shuffling
+	 * 
 	 * @see #run(double[], int)
 	 * @param pattern the input pattern - value elements should be -1 to +1
 	 * 
 	 */
-	protected void step( double pattern[] ) {
+	protected void step( DoubleMatrix pattern ) {
 
 		// shuffle ... part 1
 		int indices[] = new int[vectorSize] ;
@@ -78,7 +82,7 @@ public class HopfieldNetwork {
 			int ix = rng.nextInt( vectorSize-i ) ;
 			indices[ix] = indices[ vectorSize-i-1 ] ;
 
-			pattern[ix] = getOutput(ix, pattern ) ;			
+			pattern.put(ix, getOutput(ix, pattern ) ) ;			
 		}
 	}
 
@@ -91,41 +95,12 @@ public class HopfieldNetwork {
 	 * @param pattern the input pattern - value elements should be -1 to +1
 	 * @return the output, normalized to -1 or +1 
 	 */
-	protected double getOutput( int neuronIndex, double pattern[] ) {
-		double s = 0 ;
-		for( int i=0 ; i<vectorSize ; i++ ) {
-			s += weights[neuronIndex][i] * pattern[i] ;  
-		}
-		return s>0 ? 1 : -1  ;
+	protected double getOutput( int neuronIndex, DoubleMatrix pattern ) {
+		double dp = weights.getColumn( neuronIndex ).dot( pattern ) ;
+		return dp>0 ? 1 : -1  ;
 	}
 
-//=====================================================================
 
-	/**
-	 * Train the network with a set of patterns, using
-	 * Hebb's batch learning method.
-	 * 
-	 * In learning, generally, a non-zero diagonal can theoretically 
-	 * learn the identity ( i.e. all ones on the diagonal everywhere else ).
-	 * That's not a good learned solution - extreme overfitting !!!!
-	 * 
-	 * @param patterns an array of vector patterns
-	 */
-	public void hebbian( double patterns[][] ) {
-
-		// calculate weights in a single batch
-		for( int i=0 ; i<vectorSize ; i++ ) {
-			for( int j=0 ; j<vectorSize ; j++ ) {
-				if( j != i ) {
-					double tot = 0.0 ;
-					for( int p=0 ; p<patterns.length ; p++ ) {
-						tot += patterns[p][j] * patterns[p][i] ;
-					}
-					weights[i][j] = tot / patterns.length ;
-				}
-			}
-		}
-	}
 
 
 	//=================================================================================
@@ -138,40 +113,18 @@ public class HopfieldNetwork {
 	 * @param pattern
 	 */
 
-	protected void storkey( double pattern[] ) { 
+	protected void learn( double pattern[] ) { 
 
-		double h[] = new double[vectorSize] ;
-		double dw[][] = new double[vectorSize][vectorSize] ;
+		DoubleMatrix p2 = new DoubleMatrix( pattern ) ;
+		DoubleMatrix h2 = weights.mmul( p2 ) ;
 		
-		// h = pattern x weights 
-		for(int i=0;i<vectorSize;i++) {
-			for(int k=0;k<vectorSize;k++) {
-				if(k!=i) {
-					h[i] += weights[i][k] * pattern[k];
-				}
-			}
-		}
-
-		// t1 = pattern x pattern
-		// t2 = pattern x h
-		// t3 = n/a
-		for(int i=0;i<vectorSize;i++) {
-			for(int j=0;j<vectorSize;j++) {
-				double t1 = pattern[i] * pattern[j] ;
-				double t2 = pattern[i] * h[j] ;
-				double t3 = pattern[j] * h[i] ;
-				double t4 = h[j] * h[i] ;
-				dw[i][j] += (t1-t2-t3+t4) / vectorSize ;
-			}
-		}		
-
-		for( int i=0 ; i<vectorSize ; i++ ) {
-			for( int j=0 ; j<vectorSize ; j++ ) {
-				if( i != j ) {
-					weights[i][j] += dw[i][j] ;
-				}
-			}
-		}
+		DoubleMatrix t1 = p2.mmul( p2.transpose() ) ;
+		DoubleMatrix t2 = p2.mmul( h2.transpose() ) ;
+		DoubleMatrix t3 = h2.mmul( p2.transpose() ) ;
+		DoubleMatrix t4 = h2.mmul( h2.transpose() ) ;
+	
+		DoubleMatrix dw = t1.sub( t2 ).sub( t3 ).add( t4 ).div( vectorSize ) ;
+		weights.addi( dw ) ; 
 	}
 	
 /**
@@ -180,14 +133,11 @@ public class HopfieldNetwork {
  * 
  * @param patterns an array of vector patterns
  */
-	public void storkey( double patterns[][] ) {
-		for( int i=0 ; i<vectorSize ; i++ ) {
-			for( int j=0 ; j<vectorSize ; j++ ) {
-				weights[i][j] = 0 ;
-			}
-		}
+	public void learn( double patterns[][] ) {
+		weights.fill(0) ;
+
 		for( int p=0 ; p<patterns.length ; p++ ) {
-			storkey( patterns[p] ) ;
+			learn( patterns[p] ) ;
 		}
 	}
 }
