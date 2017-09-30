@@ -4,15 +4,13 @@ import java.util.Random;
 
 import org.jblas.DoubleMatrix;
 /**
- * Implements a Hopfiled Network, which supports Storkey (2nd order) 
- * and Hebbian learning
+ * Implements a Hopfield Network, which supports Storkey (2nd order) learning
  * 	 
  * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.646.954&rep=rep1&type=pdf
  *
- * The network capacity depends on learning:
+ * The network capacity (#patterns) = vectorSize / sqrt( 2 x ln(vectorSize) )
  * 
- * 		Hebb 		num patterns = 0.138 * vectorSize
- * 		Storkey		num patterns = vectorSize / sqrt( 2 x ln(vectorSize) )
+ * This will also forget older learned patterns if we keep adding new ones.
  * 
  */
 public class HopfieldNetwork {
@@ -51,8 +49,9 @@ public class HopfieldNetwork {
 	 * @param iterations the number of iterations to execute before finishing
 	 */
 	public void run( double pattern[], int iterations ) {
+		DoubleMatrix p = new DoubleMatrix( pattern ) ;
 		for( int i=0 ; i<iterations ; i++ ) {
-			step( new DoubleMatrix( pattern ) ) ;
+			step( p ) ;
 		}
 	}
 
@@ -113,17 +112,20 @@ public class HopfieldNetwork {
 	 * @param pattern
 	 */
 
-	protected void learn( double pattern[] ) { 
+	protected void learn( DoubleMatrix pattern ) { 
 
-		DoubleMatrix p2 = new DoubleMatrix( pattern ) ;
-		DoubleMatrix h2 = weights.mmul( p2 ) ;
+		DoubleMatrix h = weights.mmul( pattern ) ;   // hebbian component
 		
-		DoubleMatrix t1 = p2.mmul( p2.transpose() ) ;
-		DoubleMatrix t2 = p2.mmul( h2.transpose() ) ;
-		DoubleMatrix t3 = h2.mmul( p2.transpose() ) ;
-		DoubleMatrix t4 = h2.mmul( h2.transpose() ) ;
+		DoubleMatrix t1 = pattern.mmul( pattern.transpose() ) ;
+		DoubleMatrix t2 = pattern.mmul( h.transpose() ) ;
+		DoubleMatrix t3 = h.mmul( pattern.transpose() ) ;
+		DoubleMatrix t4 = h.mmul( h.transpose() ) ;	
 	
 		DoubleMatrix dw = t1.sub( t2 ).sub( t3 ).add( t4 ).div( vectorSize ) ;
+		
+		// clear the diagonal ( so we can't learn identity matrix )
+		for( int i=0 ; i<vectorSize ; i++ ) dw.put( i, i, 0 ) ;
+		
 		weights.addi( dw ) ; 
 	}
 	
@@ -137,7 +139,7 @@ public class HopfieldNetwork {
 		weights.fill(0) ;
 
 		for( int p=0 ; p<patterns.length ; p++ ) {
-			learn( patterns[p] ) ;
+			learn( new DoubleMatrix( patterns[p] ) ) ;
 		}
 	}
 }

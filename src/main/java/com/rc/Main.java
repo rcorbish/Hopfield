@@ -45,10 +45,10 @@ public class Main {
 				sb[0][i].append( "       " ) ;
 			}
 
-			long start = System.currentTimeMillis() ;
-			net.run( pattern, 40 ) ;
-			long delta = System.currentTimeMillis() - start ;
-			//System.out.println( "Run in " + delta + "mS" );
+			long start = System.nanoTime() ;
+			net.run( pattern, 20 ) ;
+			long delta = System.nanoTime() - start ;
+			System.out.println( "Run in " + (delta/1000) + "uS" );
 				
 			ix = 0 ;
 			for( int i=0 ; i<7 ; i++ ) {
