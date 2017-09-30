@@ -2,13 +2,16 @@ package com.rc;
 
 import java.util.Random;
 /**
- * Implements a Hopfiled Network, which supports Storkey 
+ * Implements a Hopfiled Network, which supports Storkey (2nd order) 
  * and Hebbian learning
- * 
+ * 	 
+ * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.646.954&rep=rep1&type=pdf
+ *
  * The network capacity depends on learning:
  * 
- * Hebb 	num patterns = 0.138 * vectorSize
- * Storkey	num patterns = vectorSize / sqrt( 2 x log(vectorSize) )
+ * 		Hebb 		num patterns = 0.138 * vectorSize
+ * 		Storkey		num patterns = vectorSize / sqrt( 2 x ln(vectorSize) )
+ * 
  */
 public class HopfieldNetwork {
 
@@ -102,6 +105,10 @@ public class HopfieldNetwork {
 	 * Train the network with a set of patterns, using
 	 * Hebb's batch learning method.
 	 * 
+	 * In learning, generally, a non-zero diagonal can theoretically 
+	 * learn the identity ( i.e. all ones on the diagonal everywhere else ).
+	 * That's not a good learned solution - extreme overfitting !!!!
+	 * 
 	 * @param patterns an array of vector patterns
 	 */
 	public void hebbian( double patterns[][] ) {
@@ -123,6 +130,13 @@ public class HopfieldNetwork {
 
 	//=================================================================================
 
+	/**
+	 * Run Storkey learning on one pattern
+	 * 
+	 * @see #storkey(double[][])
+	 * 
+	 * @param pattern
+	 */
 
 	protected void storkey( double pattern[] ) { 
 
@@ -146,13 +160,16 @@ public class HopfieldNetwork {
 				double t1 = pattern[i] * pattern[j] ;
 				double t2 = pattern[i] * h[j] ;
 				double t3 = pattern[j] * h[i] ;
-				dw[i][j] += (t1-t2-t3) / vectorSize ;
+				double t4 = h[j] * h[i] ;
+				dw[i][j] += (t1-t2-t3+t4) / vectorSize ;
 			}
 		}		
 
 		for( int i=0 ; i<vectorSize ; i++ ) {
 			for( int j=0 ; j<vectorSize ; j++ ) {
-				weights[i][j] += dw[i][j] ;
+				if( i != j ) {
+					weights[i][j] += dw[i][j] ;
+				}
 			}
 		}
 	}
@@ -173,6 +190,4 @@ public class HopfieldNetwork {
 			storkey( patterns[p] ) ;
 		}
 	}
-
-
 }

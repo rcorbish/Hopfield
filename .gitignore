@@ -5,3 +5,5 @@ bin/
 .gradle
 .project
 .classpath
+.settings
+target
