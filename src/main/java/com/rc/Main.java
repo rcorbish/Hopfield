@@ -14,25 +14,29 @@ public class Main {
 //			test( net, patterns ) ;
 			
 			LinearRegression lr = new LinearRegression() ;
-			double X[][] = { {2}, {3}, {6}, {1}, {4} } ;
-			double y[] = {  5, 7, 13, 3, 9 } ;
+			double xx[][] = { {2}, {3}, {6}, {1}, {4} } ;
+			double yy[] = {  5, 7, 13, 3, 9 } ;
 			// y = 2x
 			
 			DoubleMatrix theta = lr.solve( 	new DoubleMatrix(housePriceX), 
 						new DoubleMatrix(housePriceY),
-						0.0000007,   // learning rate
-						0.005, 	// L2 lambda
-						0.001,	// threshold
-						400 ) ;	// max Iteration
+						0, 				// L2 lambda
+						1e-15,			// threshold
+						1000 ) ;		// max Iteration			
 			
-			System.out.println( "Solve " + theta );
+//			theta = lr.solveFast( 
+//					new DoubleMatrix(housePriceX), 
+//					new DoubleMatrix(housePriceY) 
+//					) ;
+//			
+			DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(housePriceX).rows ) ;
+			DoubleMatrix X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(housePriceX)) ;
 			
-			theta = lr.solveFast( 
-					new DoubleMatrix(housePriceX), 
-					new DoubleMatrix(housePriceY) 
-					) ;
+			System.out.println( "Solved:   " + theta );
+			System.out.println( "Solution: " + X.mmul( theta ) ) ; 
+			System.out.println( "Actual:   " + new DoubleMatrix(housePriceY)  ) ;
 			
-			System.out.println( "FSolve " + theta );
+			//System.out.println( "FSolve " + theta );
 			
 		} catch( Throwable t ) {
 			t.printStackTrace( );
