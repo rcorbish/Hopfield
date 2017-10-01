@@ -3,47 +3,95 @@ package com.rc;
 import java.util.Random;
 
 import org.jblas.DoubleMatrix;
+import org.jblas.ranges.IntervalRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main {
+	final static Logger log = LoggerFactory.getLogger( LinearRegression.class ) ;
 
 	static Random rng = new Random() ;
 	public static void main(String[] args) {
 		try {
-//			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
-//			net.learn(patterns);
-//			test( net, patterns ) ;
-			
+			//			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
+			//			net.learn(patterns);
+			//			test( net, patterns ) ;
+
 			LinearRegression lr = new LinearRegression() ;
-			double xx[][] = { {2}, {3}, {6}, {1}, {4} } ;
-			double yy[] = {  5, 7, 13, 3, 9 } ;
+
+			testLR(housePriceX, housePriceY, lr ) ;
+			testLR2(housePriceX, housePriceY, lr ) ;
+
+			double t[] = new double[6] ;
+			double xx[][] = new double[10_000][t.length-1] ;
+			double yy[] = new double[ xx.length];
+
+			for( int i=0 ; i<t.length ; i++ ) {
+				t[i] = rng.nextInt(11) - 6 ;
+			}
+
+
+			for( int i=0 ; i<xx.length ; i++ ) {
+				yy[i] = t[0] ;
+				for( int j=1 ; j<t.length ; j++ ) {
+					xx[i][j-1] = rng.nextDouble() * 10 ;
+					yy[i] +=  t[j] * xx[i][j-1] ;
+				}
+				yy[i] += rng.nextGaussian()  ; 
+			}
 			// y = 2x
-			
-			DoubleMatrix theta = lr.solve( 	new DoubleMatrix(housePriceX), 
-						new DoubleMatrix(housePriceY),
-						0, 				// L2 lambda
-						1e-15,			// threshold
-						1000 ) ;		// max Iteration			
-			
-//			theta = lr.solveFast( 
-//					new DoubleMatrix(housePriceX), 
-//					new DoubleMatrix(housePriceY) 
-//					) ;
-//			
-			DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(housePriceX).rows ) ;
-			DoubleMatrix X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(housePriceX)) ;
-			
-			System.out.println( "Solved:   " + theta );
-			System.out.println( "Solution: " + X.mmul( theta ) ) ; 
-			System.out.println( "Actual:   " + new DoubleMatrix(housePriceY)  ) ;
-			
-			//System.out.println( "FSolve " + theta );
-			
+
+			System.out.println( "\n\nActual  >>" + new DoubleMatrix(t).getRows( new IntervalRange(0, Math.min(10,t.length) ) ) ); 
+			testLR(xx, yy, lr ) ;
+			testLR2(xx, yy, lr ) ;
+
 		} catch( Throwable t ) {
 			t.printStackTrace( );
 			System.exit(1); 
 		}
 	}
 
+
+	static void testLR( double x[][], double y[], LinearRegression lr ) {
+		DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(x).rows ) ;
+		DoubleMatrix X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(x)) ;
+		System.out.println( " ------------ Nelder Meads -------------" ) ; 
+
+		double scale = 1.0 ;
+		log.info( "Scale {}", scale ) ; 
+		long start = System.nanoTime() ;
+		DoubleMatrix theta = lr.solve( 	
+				new DoubleMatrix(x), 
+				new DoubleMatrix(y),
+				scale, //1.5,				// Alpha = step rate
+				1e-12,			// threshold
+				1e-4, 			// L2 lambda
+				1000 ) ;		// max Iteration			
+		long delta = System.nanoTime() - start ;
+
+		System.out.println( "Solved:   " + theta.getRows( new IntervalRange(0, Math.min(10,X.columns) ) ) ) ; 
+		System.out.println( "Solution: " + X.mmul( theta ).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
+		System.out.println( "Actual:   " + new DoubleMatrix(y).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ;  
+		System.out.println( "Elapsed:  " + delta/1000 + "uS" );
+
+	}
+
+	static void testLR2( double x[][], double y[], LinearRegression lr ) {
+		DoubleMatrix X = new DoubleMatrix(x) ;
+
+		System.out.println( " ------------ Least Squares -------------" ) ; 
+		long start = System.nanoTime() ;
+		DoubleMatrix theta = lr.solveFast( X, new DoubleMatrix(y) ) ;				
+		long delta = System.nanoTime() - start ;
+
+		DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(x).rows ) ;
+		X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(x)) ;
+
+		System.out.println( "Solved:   " + theta.getRows( new IntervalRange(0, Math.min(10,X.columns) ) ) ) ; 
+		System.out.println( "Solution: " + X.mmul( theta ).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
+		System.out.println( "Actual:   " + new DoubleMatrix(y).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
+		System.out.println( "Elapsed:  " + delta/1000 + "uS" );
+	}
 
 	static void test( HopfieldNetwork net, double patterns[][] ) {
 
@@ -77,7 +125,7 @@ public class Main {
 			net.run( pattern, 20 ) ;
 			long delta = System.nanoTime() - start ;
 			System.out.println( "Run in " + (delta/1000) + "uS" );
-				
+
 			ix = 0 ;
 			for( int i=0 ; i<7 ; i++ ) {
 				for( int j=0 ; j<5 ; j++ ) {
@@ -97,31 +145,31 @@ public class Main {
 
 
 	static double pattern0[] = {
-			 0,  0,  1,  0,  0,
-			 0,  1,  0,  1,  0,
-			 1,  0,  0,  0,  1,
-			 1,  1,  1,  1,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1 } ;
+			0,  0,  1,  0,  0,
+			0,  1,  0,  1,  0,
+			1,  0,  0,  0,  1,
+			1,  1,  1,  1,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1 } ;
 
 	static double pattern1[] = {
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 0,  1,  1,  1,  0 } ;
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			0,  1,  1,  1,  0 } ;
 
 	static double pattern2[] = {
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1,
-			 0,  1,  0,  1,  0,
-			 0,  0,  1,  0,  0,
-			 0,  1,  0,  1,  0,
-			 1,  0,  0,  0,  1,
-			 1,  0,  0,  0,  1 } ;
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1,
+			0,  1,  0,  1,  0,
+			0,  0,  1,  0,  0,
+			0,  1,  0,  1,  0,
+			1,  0,  0,  0,  1,
+			1,  0,  0,  0,  1 } ;
 
 	static double pattern3[] = {
 			0,  1,  1,  1,  0,
@@ -132,12 +180,12 @@ public class Main {
 			1,  0,  0,  0,  1,
 			0,  1,  1,  1,  0 } ;
 
-		  
+
 
 	static double patterns[][] = {  prepare(pattern0), 
-									prepare(pattern1), 
-									prepare(pattern2), 
-									prepare(pattern3) } ;
+			prepare(pattern1), 
+			prepare(pattern2), 
+			prepare(pattern3) } ;
 
 
 	static double [] prepare( double in[] ) {
@@ -153,6 +201,6 @@ public class Main {
 			{1416,3,2,40}, 
 			{1534,3,2,30}, 
 			{ 852,2,1,36} 
-			} ; 
+	} ; 
 	static double housePriceY[] = { 460, 232, 315, 178 } ; 
 }

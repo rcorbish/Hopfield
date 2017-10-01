@@ -2,12 +2,16 @@ package com.rc;
 
 import org.jblas.DoubleMatrix;
 import org.jblas.Solve;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LinearRegression {
 
-	private DoubleMatrix theta ;
+	final static Logger log = LoggerFactory.getLogger( LinearRegression.class ) ;
 
 	public DoubleMatrix solveFast( DoubleMatrix x,  DoubleMatrix y ) {
+		log.debug( "Starting solveFast" ) ;
+		
 		if( x.isSquare() && y.length==x.rows ) {
 		//	return Solve.solve(x, y) ;
 		}
@@ -17,13 +21,15 @@ public class LinearRegression {
 		return Solve.solveLeastSquares(X, y) ;		
 	}
 
-	public DoubleMatrix solve( DoubleMatrix x,  DoubleMatrix y, double lambda, double threshold, int maxIterations ) {
+	public DoubleMatrix solve( DoubleMatrix x,  DoubleMatrix y, double alpha, double epsilon, double lambda, int maxIterations ) {
+		log.debug( "Starting solve" ) ;
+		
 		DoubleMatrix I = DoubleMatrix.ones( x.rows ) ;
 		DoubleMatrix X = DoubleMatrix.concatHorizontally(I, x) ;
 
-		theta = DoubleMatrix.zeros( X.columns ) ;
-
-		return nelderMead(X, y, theta, 1e-12, lambda, 1000 ).transpose();
+		DoubleMatrix theta = DoubleMatrix.zeros( X.columns ) ;
+		
+		return nelderMead(X, y, theta, alpha, epsilon, lambda, maxIterations ).transpose();
 	}
 
 
@@ -39,98 +45,97 @@ public class LinearRegression {
 
 
 
-	static final int MAX_IT = 1000;      	/* maximum number of iterations */
-	static final double ALPHA  = 1.5;       /* reflection coefficient */
-	static final double BETA   = 0.5;       /* contraction coefficient */
-	static final double GAMMA  = 2.0;       /* expansion coefficient */
+	public DoubleMatrix nelderMead( DoubleMatrix X, DoubleMatrix y, DoubleMatrix start, double scale, double EPSILON, double LAMBDA, int maxIterations ) {
 
-	public DoubleMatrix nelderMead(DoubleMatrix X, DoubleMatrix y, DoubleMatrix start, double EPSILON, double LAMBDA, int maxIterations ) {
+		final double ALPHA  = 1.5;       /* contraction coefficient */
+		final double BETA   = 0.5;       /* contraction coefficient */
+		final double GAMMA  = 2.0;       /* expansion coefficient */
 
 		int n = X.columns ;
-		double scale = 1 ;
+		//double scale = scale ;
 		double f[]   = new double[n+1];
 
-		int vs;         /* vertex with smallest value */
-		int vh;         /* vertex with next smallest value */
-		int vg;         /* vertex with largest value */
 		int itr;	    /* track the number of iterations */
 
 		double pn = scale*(Math.sqrt(n+1)-1+n)/(n*Math.sqrt(2));
 		double qn = scale*(Math.sqrt(n+1)-1)/(n*Math.sqrt(2));
 
-		DoubleMatrix v2 = new DoubleMatrix( n+1, n ) ;
+		DoubleMatrix thetas = new DoubleMatrix( n+1, n ) ;
 		for( int i=0;i<n;i++) {
-			v2.putRow(0, start) ;
+			thetas.putRow(0, start) ;
 		}
 
 		for( int i=1;i<=n;i++) {
-			v2.putRow( i, start.add(qn).put( i-1, start.get(i-1)+pn) ) ;
+			thetas.putRow( i, start.add(qn).put( i-1, start.get(i-1)+pn) ) ;
 		}
 		
 		for( int j=0;j<=n;j++) {
-			f[j] = cost( X, y, v2.getRow(j).transpose(), LAMBDA ) ;
+			f[j] = cost( X, y, thetas.getRow(j).transpose(), LAMBDA ) ;
 		}
 
 		
 		/* begin the main loop of the minimization */
 		for( itr=0 ; itr<maxIterations ; itr++ ) {     
-			// vg = largest
-			// vh = 2nd largest
-			// vs = smallest
-			DoubleMatrix f22 = new DoubleMatrix( f ) ;
-			vs = f22.argmin() ;
-			vg = f22.argmax() ;
-			double tmp = f22.get( vg ) ;
-			f22.put( vg, Double.MIN_VALUE ) ;
-			vh = f22.argmax() ;
-			f22.put( vg, tmp ) ;
 
-			DoubleMatrix vm = v2.columnSums().subi( v2.getRow(vg) ).div( n ) ; 
+			int vs=0 ;	// smallest
+			int vg=0 ;	// worst
+			int vh=0 ;	// second worst
 			
-			DoubleMatrix vr2 = vm.sub( v2.getRow(vg) ).muli( ALPHA ).addi( vm ).transpose() ;
-			double fr = cost( X, y, vr2, LAMBDA ) ;
+			for( int j=1;j<=n;j++) {
+				if (f[j] < f[vs]) {
+					vs = j;
+				}
+				if (f[j] > f[vg]) {
+					vg = j;
+				}
+			}
+			for( int j=1; j<=n; j++) {
+				if (f[j] > f[vh] && f[j] < f[vg] ) {
+					vh = j;
+				}
+			}			
+			
+			DoubleMatrix vm = thetas.columnSums().subi( thetas.getRow(vg) ).div( n ) ; 
+			
+			DoubleMatrix vr = vm.sub( thetas.getRow(vg) ).muli( ALPHA ).addi( vm ).reshape( vm.columns, vm.rows ) ;
+			double fr = cost( X, y, vr, LAMBDA ) ;
 
 			if( fr < f[vh] && fr >= f[vs]) {
-				v2.putRow(vg, vr2);
-				f[vg ] = fr ;
+				thetas.putRow(vg, vr);
+				f[vg] = fr ;
 			}
 			
 			/* investigate a step further in this direction */
 			if ( fr <  f[vs]) {
-				DoubleMatrix ve2 = vm.sub( vr2 ).muli( GAMMA ).addi( vm ).transpose() ;
+				DoubleMatrix ve = vr.sub( vm ).muli( GAMMA ).addi( vm ).reshape( vm.columns, vm.rows ) ;
 
-				double fe = cost( X, y, ve2, LAMBDA );
+				double fe = cost( X, y, ve, LAMBDA );
 				if (fe < f[vs] ) {
 					f[vg] = fe;
-					v2.putRow( vg, ve2 ) ;
+					thetas.putRow( vg, ve ) ;
 				}
 				else {
 					f[vg] = fr;
-					v2.putRow( vg, vr2 ) ;
+					thetas.putRow( vg, vr ) ;
 				}
 			}
 
-			DoubleMatrix vc2 ;
+			
 			/* check to see if a contraction is necessary */
 			if (fr >= f[vh]) {
-				if (fr < f[vg] && fr >= f[vh]) {
-					/* perform outside contraction */
-					vc2 = vr2.sub( vm ).muli( BETA ).addi( vm ) ;
-				}
-				else {
-					/* perform inside contraction */
-					vc2 = vm.sub( v2.getRow(vg) ).muli( -BETA ).addi( vm ).transpose() ;
-				}
+				DoubleMatrix vc = (fr < f[vg] && fr >= f[vh])  ?					
+					vr.sub( vm ).muli( BETA ).addi( vm ) :   							// outside contraction 					
+					vm.sub( thetas.getRow(vg) ).muli( -BETA ).addi( vm ).reshape( vm.columns, vm.rows ) ;  // inside				
 				
-				double fc = cost( X, y, vc2, LAMBDA );
+				double fc = cost( X, y, vc, LAMBDA );
 
 				if (fc < f[vg]) {
-					v2.putRow( vg, vc2 ) ;
+					thetas.putRow( vg, vc ) ;
 					f[vg] = fc;
 				} else {
-					v2 = v2.subRowVector( v2.getRow(vs) ).divi( 2.0 ).addRowVector( v2.getRow(vs) ) ; 
-					f[vg] = cost( X, y, v2.getRow(vg).transpose(), LAMBDA );
-					f[vh] = cost( X, y, v2.getRow(vh).transpose(), LAMBDA );
+					thetas = thetas.subRowVector( thetas.getRow(vs) ).divi( 2.0 ).addRowVector( thetas.getRow(vs) ) ; 
+					f[vg] = cost( X, y, thetas.getRow(vg).transpose(), LAMBDA );
+					f[vh] = cost( X, y, thetas.getRow(vh).transpose(), LAMBDA );
 				}
 			}
 
@@ -148,15 +153,17 @@ public class LinearRegression {
 			if (s < EPSILON) break;
 		}	/* end main loop of the minimization */
 
+		log.info( "Completed solution in {} iterations", itr ) ;
+
 		/* find the index of the smallest value */
-		vs=0;
-		for( int j=0;j<=n;j++) {
+		int vs=0;
+		for( int j=1;j<=n;j++) {
 			if (f[j] < f[vs]) {
 				vs = j;
 			}
 		}
 		
-		return v2.getRow( vs ) ;
+		return thetas.getRow( vs ) ;
 	}
 }
 
