@@ -76,13 +76,16 @@ public class HopfieldNetwork {
 			indices[i] = i ;
 		}
 
+//		DoubleMatrix o = weights.mmul( pattern ) ;
+//		return o.gt(0).mul(2).sub(1) ;		
+		
 		for( int i=0 ; i<vectorSize ; i++ ) {
 			// shuffle ... part 2
 			int ix = rng.nextInt( vectorSize-i ) ;
 			indices[ix] = indices[ vectorSize-i-1 ] ;
 
-			pattern.put(ix, getOutput(ix, pattern ) ) ;			
-		}
+			pattern.put(i, getOutput(i, pattern ) ) ;			
+		}		
 	}
 
 	/**

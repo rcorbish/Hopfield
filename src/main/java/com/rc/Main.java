@@ -2,14 +2,38 @@ package com.rc;
 
 import java.util.Random;
 
+import org.jblas.DoubleMatrix;
+
 public class Main {
 
 	static Random rng = new Random() ;
 	public static void main(String[] args) {
 		try {
-			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
-			net.learn(patterns);
-			test( net, patterns ) ;
+//			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
+//			net.learn(patterns);
+//			test( net, patterns ) ;
+			
+			LinearRegression lr = new LinearRegression() ;
+			double X[][] = { {2}, {3}, {6}, {1}, {4} } ;
+			double y[] = {  5, 7, 13, 3, 9 } ;
+			// y = 2x
+			
+			DoubleMatrix theta = lr.solve( 	new DoubleMatrix(housePriceX), 
+						new DoubleMatrix(housePriceY),
+						0.0000007,   // learning rate
+						0.005, 	// L2 lambda
+						0.001,	// threshold
+						400 ) ;	// max Iteration
+			
+			System.out.println( "Solve " + theta );
+			
+			theta = lr.solveFast( 
+					new DoubleMatrix(housePriceX), 
+					new DoubleMatrix(housePriceY) 
+					) ;
+			
+			System.out.println( "FSolve " + theta );
+			
 		} catch( Throwable t ) {
 			t.printStackTrace( );
 			System.exit(1); 
@@ -119,5 +143,12 @@ public class Main {
 		}
 		return rc ;
 	}
-								
+
+	static double housePriceX[][] = {  
+			{2104,5,1,45}, 
+			{1416,3,2,40}, 
+			{1534,3,2,30}, 
+			{ 852,2,1,36} 
+			} ; 
+	static double housePriceY[] = { 460, 232, 315, 178 } ; 
 }
