@@ -21,14 +21,10 @@ public class LinearRegression {
 		return Solve.solveLeastSquares(X, y) ;		
 	}
 
-	public DoubleMatrix solve( DoubleMatrix x,  DoubleMatrix y, double alpha, double epsilon, double lambda, int maxIterations ) {
+	public DoubleMatrix solve( DoubleMatrix X,  DoubleMatrix y, double alpha, double epsilon, double lambda, int maxIterations ) {
 		log.debug( "Starting solve" ) ;
-		
-		DoubleMatrix I = DoubleMatrix.ones( x.rows ) ;
-		DoubleMatrix X = DoubleMatrix.concatHorizontally(I, x) ;
-
-		DoubleMatrix theta = DoubleMatrix.zeros( X.columns ) ;
-		
+		// Starting point for theta - NM seems to like zeros
+		DoubleMatrix theta = DoubleMatrix.zeros( X.columns ) ;		
 		return nelderMead(X, y, theta, alpha, epsilon, lambda, maxIterations ).transpose();
 	}
 

@@ -11,6 +11,7 @@ public class Main {
 	final static Logger log = LoggerFactory.getLogger( LinearRegression.class ) ;
 
 	static Random rng = new Random() ;
+	static final int THETAS_TO_SHOW = 5 ;
 	public static void main(String[] args) {
 		try {
 			//			HopfieldNetwork net = new HopfieldNetwork( 35 ) ;
@@ -22,28 +23,37 @@ public class Main {
 			testLR(housePriceX, housePriceY, lr ) ;
 			testLR2(housePriceX, housePriceY, lr ) ;
 
-			double t[] = new double[6] ;
-			double xx[][] = new double[10_000][t.length-1] ;
-			double yy[] = new double[ xx.length];
+			int ROWS = 500 ;
+			int COLS = 100 ;
+			double t[] = new double[COLS+1] ;
+			double xx[] = new double[ROWS * COLS] ;
+			double yy[] = new double[ ROWS ];
 
 			for( int i=0 ; i<t.length ; i++ ) {
 				t[i] = rng.nextInt(11) - 6 ;
 			}
 
-
-			for( int i=0 ; i<xx.length ; i++ ) {
-				yy[i] = t[0] ;
-				for( int j=1 ; j<t.length ; j++ ) {
-					xx[i][j-1] = rng.nextDouble() * 10 ;
-					yy[i] +=  t[j] * xx[i][j-1] ;
+			//int ix = 0 ;
+			for( int j=0 ; j<ROWS ; j++ ) {
+				yy[j] = t[0] ;
+				for( int i=1 ; i<COLS+1 ; i++ ) {
+					int ix = (i-1)*ROWS + j ;
+//					log.info( "Next index {}", ix ) ;
+					xx[ix] = rng.nextDouble() * 10 ;
+					// xx[ix] = (i*100) + j+1 ;
+					yy[j] +=  t[i] * xx[ix] ;
+					ix++ ;
 				}
-				yy[i] += rng.nextGaussian()  ; 
+				yy[j] += rng.nextGaussian() ; 
 			}
-			// y = 2x
+			// log.info( "Raw data {}", xx ) ;
+			// y = f(x)
+			// DoubleMatrix m = new DoubleMatrix( ROWS, COLS, xx ) ;
+			// System.out.println( m );
 
-			System.out.println( "\n\nActual  >>" + new DoubleMatrix(t).getRows( new IntervalRange(0, Math.min(10,t.length) ) ) ); 
-			testLR(xx, yy, lr ) ;
-			testLR2(xx, yy, lr ) ;
+			System.out.println( "\n\nActual  >>" + new DoubleMatrix(t).getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,t.length) ) ) ); 
+			//testLR(ROWS,COLS,xx, yy, lr ) ;
+			testLR2(ROWS,COLS,xx, yy, lr ) ;
 
 		} catch( Throwable t ) {
 			t.printStackTrace( );
@@ -53,43 +63,65 @@ public class Main {
 
 
 	static void testLR( double x[][], double y[], LinearRegression lr ) {
-		DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(x).rows ) ;
+		DoubleMatrix I = DoubleMatrix.ones( x.length ) ;
 		DoubleMatrix X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(x)) ;
-		System.out.println( " ------------ Nelder Meads -------------" ) ; 
+		testLR( X, new DoubleMatrix(y), lr ) ;
+	}
+	static void testLR( int ROWS, int COLS, double x[], double y[], LinearRegression lr ) {
+		DoubleMatrix I = DoubleMatrix.ones( ROWS ) ;
+		DoubleMatrix X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix( ROWS, COLS, x)) ;
+		testLR( X, new DoubleMatrix(y), lr ) ;
+	}
 
+	static void testLR( DoubleMatrix X, DoubleMatrix y, LinearRegression lr ) {
+		System.out.println( " ------------ Nelder Meads -------------" ) ; 
 		double scale = 1.0 ;
 		log.info( "Scale {}", scale ) ; 
 		long start = System.nanoTime() ;
 		DoubleMatrix theta = lr.solve( 	
-				new DoubleMatrix(x), 
-				new DoubleMatrix(y),
+				X, 
+				y,
 				scale, //1.5,				// Alpha = step rate
 				1e-12,			// threshold
 				1e-4, 			// L2 lambda
 				1000 ) ;		// max Iteration			
 		long delta = System.nanoTime() - start ;
 
-		System.out.println( "Solved:   " + theta.getRows( new IntervalRange(0, Math.min(10,X.columns) ) ) ) ; 
-		System.out.println( "Solution: " + X.mmul( theta ).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
-		System.out.println( "Actual:   " + new DoubleMatrix(y).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ;  
-		System.out.println( "Elapsed:  " + delta/1000 + "uS" );
+		log.debug( "Theta {} x {}", theta.rows, theta.columns ) ;
+		log.debug( "    X {} x {}", X.rows, X.columns ) ;
 
+		log.info( "Solved:   {}", theta.getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.columns) ) ) ) ; 
+		log.info( "Solution: {}", X.mmul( theta ).getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.rows) ) ) ) ; 
+		log.info( "Actual:   {}", y.getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.rows) ) ) ) ;  
+		log.info( "Elapsed:  {} uS", delta/1000  );
 	}
 
-	static void testLR2( double x[][], double y[], LinearRegression lr ) {
+
+	static void testLR2( double x[][], double yy[], LinearRegression lr ) {
 		DoubleMatrix X = new DoubleMatrix(x) ;
+		DoubleMatrix y = new DoubleMatrix(yy) ;
+		testLR2( X, y, lr ) ;
+	}		
+
+	static void testLR2( int ROWS, int COLS, double x[], double yy[], LinearRegression lr ) {
+		DoubleMatrix X = new DoubleMatrix(ROWS, COLS, x) ;
+		DoubleMatrix y = new DoubleMatrix(yy) ;
+		testLR2( X, y, lr ) ;
+	}		
+
+	static void testLR2( DoubleMatrix X, DoubleMatrix y, LinearRegression lr ) {
 
 		System.out.println( " ------------ Least Squares -------------" ) ; 
 		long start = System.nanoTime() ;
-		DoubleMatrix theta = lr.solveFast( X, new DoubleMatrix(y) ) ;				
+		DoubleMatrix theta = lr.solveFast( X, y ) ;				
 		long delta = System.nanoTime() - start ;
 
-		DoubleMatrix I = DoubleMatrix.ones( new DoubleMatrix(x).rows ) ;
-		X = DoubleMatrix.concatHorizontally(I, new DoubleMatrix(x)) ;
+		DoubleMatrix I = DoubleMatrix.ones( X.rows ) ;
+		X = DoubleMatrix.concatHorizontally(I, X ) ;
 
-		System.out.println( "Solved:   " + theta.getRows( new IntervalRange(0, Math.min(10,X.columns) ) ) ) ; 
-		System.out.println( "Solution: " + X.mmul( theta ).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
-		System.out.println( "Actual:   " + new DoubleMatrix(y).getRows( new IntervalRange(0, Math.min(10,X.rows) ) ) ) ; 
+		System.out.println( "Solved:   " + theta.getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.columns) ) ) ) ; 
+		System.out.println( "Solution: " + X.mmul( theta ).getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.rows) ) ) ) ; 
+		System.out.println( "Actual:   " + y.getRows( new IntervalRange(0, Math.min(THETAS_TO_SHOW,X.rows) ) ) ) ; 
 		System.out.println( "Elapsed:  " + delta/1000 + "uS" );
 	}
 
